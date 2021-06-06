@@ -17,4 +17,5 @@ setup(
      classifiers=[
          "Programming Language :: Python :: 3"
      ],
+     setup_requires=['wheel']
  )
