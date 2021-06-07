@@ -11,14 +11,15 @@ import sys
 import os
 
 ## TODO:
+## Consider going back to git for speed, keep track of modified files in model
+## Speed, instead of iterating over files three times, do it once
+## Print stout of deployed file list, for sanity
 ## Copy model before processing, determine which files were deleted, clear from model
-## Deleted files
-## Moved files
-## Cleanup when deploy fails, better error and ignore options
 
 LAZY_DIR = os.path.dirname(__file__) + "/"
 LOCAL_DIR = os.getcwd() + "/"
-MODEL_FILENAME = "model.p"
+MODEL_DIR_NAME = "lazy"
+MODEL_FILENAME = LOCAL_DIR.replace("/", "") + ".p"
 TEMP_DIR_NAME = "temp"
 
 PIPE = subprocess.PIPE
@@ -44,8 +45,8 @@ def run_fast_scandir(dir, ext):
         if f.is_dir():
             subfolders.append(f.path)
         if f.is_file():
-            # if os.path.splitext(f.name)[1].lower() in ext:
-            files.append(f.path)
+            if os.path.splitext(f.name)[1].lower() in ext:
+            	files.append(f.path)
     for dir in list(subfolders):
         sf, f = run_fast_scandir(dir, ext)
         subfolders.extend(sf)
@@ -57,13 +58,17 @@ class LazyDeployer:
 		## Load local storage
 		model = None
 		try:
-			model = pickle.load(open((LAZY_DIR + MODEL_FILENAME), "rb"))
+			model = pickle.load(open((LAZY_DIR + MODEL_DIR_NAME + '/' + MODEL_FILENAME), "rb"))
 		except:
 			print("Registering model")
+			try:
+				os.mkdir(LAZY_DIR + MODEL_DIR_NAME)
+			except:
+				pass
 			model = {LOCAL_DIR + "FILES": {}}
 
 		## Scan working directory for filelist
-		subfolders, files = run_fast_scandir('src', ['.cls'])
+		subfolders, files = run_fast_scandir('src', ['.cls', '.xml', '.page', '.js', '.css', '.component'])
 
 		## Initialize cache if reset flag provided or empty model
 		if reset or not len(model[LOCAL_DIR + "FILES"]):
@@ -71,7 +76,7 @@ class LazyDeployer:
 			model[LOCAL_DIR + "FILES"] = {}
 			for file in files:
 				model[LOCAL_DIR + "FILES"][file] = os.path.getctime(file)
-			pickle.dump(model, open(LAZY_DIR + MODEL_FILENAME, "wb"))
+			pickle.dump(model, open(LAZY_DIR + MODEL_DIR_NAME + '/' + MODEL_FILENAME, "wb"))
 			sys.exit(0)
 
 		## Read forceignore
@@ -181,7 +186,7 @@ class LazyDeployer:
 		process = subprocess.Popen(["git", "rev-parse", "--short", "HEAD"], stdout=PIPE, stderr=PIPE)
 		stdoutput, stderroutput = process.communicate()
 		model[LOCAL_DIR] = stdoutput.decode("utf-8")[:-1]
-		pickle.dump(model, open(LAZY_DIR + MODEL_FILENAME, "wb"))
+		pickle.dump(model, open(LAZY_DIR + MODEL_DIR_NAME + '/' + MODEL_FILENAME, "wb"))
 		sys.exit(0)
 
 def main():
