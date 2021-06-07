@@ -6,7 +6,7 @@ This project provides rudimentary source tracking for metadata deployment to scr
 
 ## Overview
 
-Lazy Deploy logs the commit of the last successful deployment to diff against the latest commit. Untracked files are added to this list. The last modified time of these files are stored to ensure that only dirty files are deployed between commits. These files are copied to a temporary directory and deployed together, to ensure all dependencies are met. For best results, initialize Lazy Deploy immediately following an org spin.
+Lazy Deploy scans the working directory and checks the last modified time of each file to determine which changes are not present on the org. These files are copied to a temporary directory and deployed together, to ensure all dependencies are met. For best results, initialize Lazy Deploy immediately following an org spin.
 
 ## Usage
 
