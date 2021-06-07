@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
      name='lazydeploy',  
-     version='0.1',
+     version='0.2',
      scripts=['lazy'] ,
      author="Rolf Locher",
      author_email="rolf.locher@ncino.com",
