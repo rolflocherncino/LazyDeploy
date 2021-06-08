@@ -19,6 +19,11 @@ Reset cache, useful after spinning an org that is already tracked.
 lazy -r
 ```
 
+## Installation
+```
+python3 -m pip install --upgrade git+https://github.com/rolflocherncino/LazyDeploy
+```
+
 ## Contact
 
 Slack: @rolf.locher
