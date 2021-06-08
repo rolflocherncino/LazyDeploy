@@ -173,14 +173,10 @@ class LazyDeployer:
 		## Deploy temporary directory
 		errors = ""
 		for line in execute(["sfdx", "force:source:deploy", "-p", TEMP_DIR_NAME]):
-			if line[0:5] == "SOURCE" or line[0:3] =="***":
-				print("\r" + line.strip() + " "*30, end="")
-				continue
-			elif line[0:6] == "Job ID":
-				print("\n" + line.strip())
-				continue
 			if "error" in line.lower() and not "Dependent class is invalid" in line:
 				errors += line
+			else:
+				print(line, end="")
 
 		## Remove temporary directory
 		rmtree(TEMP_DIR_NAME)
