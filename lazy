@@ -68,7 +68,7 @@ class LazyDeployer:
 	def intializeModel(self):
 		print("Initializing source tracking in " + LOCAL_DIR.split("/")[-2])
 		self.model = {}
-		self.model["FILES"] = []
+		self.model["FILES"] = set()
 		self.model["FILE_CTIMES"] = {}
 		self.model["LASTHASH"] = getCurrentCommit()
 		pickle.dump(self.model, open(MODEL_PATH, "wb"))
@@ -79,7 +79,7 @@ class LazyDeployer:
 			self.intializeModel()
 
 		lastHash = self.model["LASTHASH"]
-		lastFiles = self.model["FILES"][:]
+		lastFiles = self.model["FILES"]
 
 		diffFileList = getDiffFiles(lastHash)
 		untrackedFileList = getUntrackedFiles()
@@ -102,14 +102,22 @@ class LazyDeployer:
 				if fnmatch.fnmatch(file, pattern) or file.split("/")[-1][0] == ".":
 					isIgnored = True
 					break
-			modTime = os.path.getctime(file)
+			modTime = 0
+			try:
+				modTime = os.path.getctime(file)
+			except:
+				try:
+					self.model["FILES"].remove(file)
+					continue
+				except:
+					continue
 			if file in self.model["FILE_CTIMES"]:
 				if modTime == self.model["FILE_CTIMES"][file]:
 					continue
 			self.model["FILE_CTIMES"][file] = modTime
 			if not isIgnored:
 				files.append(file)
-				self.model["FILES"].append(file)
+				self.model["FILES"].add(file)
 
 		if not len(files):
 			print("No files changed.")
@@ -174,6 +182,8 @@ class LazyDeployer:
 		for line in execute(["sfdx", "force:source:deploy", "-p", TEMP_DIR_NAME]):
 			if "error" in line.lower() and not "Dependent class is invalid" in line:
 				errors += line
+			elif line[:3] == "***":
+				print("\r" + line.strip() + " " * 25)
 			else:
 				print(line, end="")
 
