@@ -11,15 +11,14 @@ import sys
 import os
 
 ## TODO:
-## Consider going back to git for speed, keep track of modified files in model
-## Speed, instead of iterating over files three times, do it once
 ## Print stout of deployed file list, for sanity
-## Copy model before processing, determine which files were deleted, clear from model
+## Add support for deleted classes
 
 LAZY_DIR = os.path.dirname(__file__) + "/"
 LOCAL_DIR = os.getcwd() + "/"
 MODEL_DIR_NAME = "lazy"
 MODEL_FILENAME = LOCAL_DIR.replace("/", "") + ".p"
+MODEL_PATH = LAZY_DIR + MODEL_DIR_NAME + '/' + MODEL_FILENAME
 TEMP_DIR_NAME = "temp"
 
 PIPE = subprocess.PIPE
@@ -39,47 +38,55 @@ def execute(cmd):
     process.stdout.close()
     process.wait()
 
-def run_fast_scandir(dir, ext):
-    subfolders, files = [], []
-    for f in os.scandir(dir):
-        if f.is_dir():
-            subfolders.append(f.path)
-        if f.is_file():
-            if os.path.splitext(f.name)[1].lower() in ext:
-            	files.append(f.path)
-    for dir in list(subfolders):
-        sf, f = run_fast_scandir(dir, ext)
-        subfolders.extend(sf)
-        files.extend(f)
-    return subfolders, files
+def getCurrentCommit():
+	process = subprocess.Popen(["git", "rev-parse", "--short", "HEAD"], stdout=PIPE, stderr=PIPE)
+	stdoutput, stderroutput = process.communicate()
+	return stdoutput.decode("utf-8")[:-1]
+
+def getDiffFiles(lastHash):
+	process = subprocess.Popen(["git", "diff", lastHash, "--name-only", "--diff-filter=AMB"], stdout=PIPE, stderr=PIPE)
+	stdoutput, stderroutput = process.communicate()
+	files = stdoutput.decode("utf-8")[:-1].split("\n")
+	return files if files[0] != '' else []
+
+def getUntrackedFiles():
+	process = subprocess.Popen(["git", "ls-files", ".", "--exclude-standard", "--others"], stdout=PIPE, stderr=PIPE)
+	stdoutput, stderroutput = process.communicate()
+	files = stdoutput.decode("utf-8")[:-1].split("\n")
+	return files if files[0] != '' else []
 
 class LazyDeployer:
-	def deploy(self, reset):
-		## Load local storage
-		model = None
+	def __init__(self):
 		try:
-			model = pickle.load(open((LAZY_DIR + MODEL_DIR_NAME + '/' + MODEL_FILENAME), "rb"))
+			self.model = pickle.load(open(MODEL_PATH, "rb"))
 		except:
-			print("Registering model")
 			try:
 				os.mkdir(LAZY_DIR + MODEL_DIR_NAME)
 			except:
 				pass
-			model = {LOCAL_DIR + "FILES": {}}
+			self.intializeModel()
 
-		## Scan working directory for filelist
-		subfolders, files = run_fast_scandir('src', ['.cls', '.xml', '.page', '.js', '.css', '.component'])
+	def intializeModel(self):
+		print("Initializing source tracking in " + LOCAL_DIR.split("/")[-2])
+		self.model = {}
+		self.model["FILES"] = []
+		self.model["FILE_CTIMES"] = {}
+		self.model["LASTHASH"] = getCurrentCommit()
+		pickle.dump(self.model, open(MODEL_PATH, "wb"))
+		sys.exit(0)
 
-		## Initialize cache if reset flag provided or empty model
-		if reset or not len(model[LOCAL_DIR + "FILES"]):
-			print("Intializing file tracking")
-			model[LOCAL_DIR + "FILES"] = {}
-			for file in files:
-				model[LOCAL_DIR + "FILES"][file] = os.path.getctime(file)
-			pickle.dump(model, open(LAZY_DIR + MODEL_DIR_NAME + '/' + MODEL_FILENAME, "wb"))
-			sys.exit(0)
+	def deploy(self, reset):
+		if reset:
+			self.intializeModel()
 
-		## Read forceignore
+		lastHash = self.model["LASTHASH"]
+		lastFiles = self.model["FILES"][:]
+
+		diffFileList = getDiffFiles(lastHash)
+		untrackedFileList = getUntrackedFiles()
+		uniqueFileList = list(set(untrackedFileList).union(set(diffFileList).union(set(lastFiles))))
+
+		# ## Read forceignore
 		patterns = ["**.json", ".*", "**.ts", "**.resource"]
 		ignore = open(".forceignore", "r")
 		ignorelines = ignore.readlines()
@@ -89,36 +96,36 @@ class LazyDeployer:
 			patterns.append(line.strip())
 
 		## Filter filelist by forceignore and last modified date
-		fileList = []
-		for file in files:
+		files = []
+		for file in uniqueFileList:
 			isIgnored = False
 			for pattern in patterns:
 				if fnmatch.fnmatch(file, pattern) or file.split("/")[-1][0] == ".":
 					isIgnored = True
 					break
 			modTime = os.path.getctime(file)
-			if file in model[LOCAL_DIR + "FILES"]:
-				if modTime == model[LOCAL_DIR + "FILES"][file]:
+			if file in self.model["FILE_CTIMES"]:
+				if modTime == self.model["FILE_CTIMES"][file]:
 					continue
-			model[LOCAL_DIR + "FILES"][file] = modTime
+			self.model["FILE_CTIMES"][file] = modTime
 			if not isIgnored:
-				fileList.append(file)
+				files.append(file)
+				self.model["FILES"].append(file)
 
-		if not len(fileList):
+		if not len(files):
 			print("No files changed.")
 			sys.exit(0)
 
 		## Create temporary directory
-		process = subprocess.Popen(["mkdir", TEMP_DIR_NAME], stdout=PIPE, stderr=PIPE)
-		stdoutput, stderroutput = process.communicate()
+		os.mkdir(TEMP_DIR_NAME)
 
 		## Copy files to temporary directory
 		count = 0
 		copyIssues = []
 		copiedTrees = []
-		for file in fileList:
+		for file in files:
 			name = file.split("/")[-1]
-			printProgress("Preparing files ", count/len(fileList), 30)
+			printProgress("Preparing files " + str(count) + "/" + str(len(files)) + " ", count/len(files), 30)
 			count += 1
 
 			if "staticresources" in file:
@@ -183,10 +190,8 @@ class LazyDeployer:
 			sys.exit(0)
 
 		## Save current commit as next seed if successful
-		process = subprocess.Popen(["git", "rev-parse", "--short", "HEAD"], stdout=PIPE, stderr=PIPE)
-		stdoutput, stderroutput = process.communicate()
-		model[LOCAL_DIR] = stdoutput.decode("utf-8")[:-1]
-		pickle.dump(model, open(LAZY_DIR + MODEL_DIR_NAME + '/' + MODEL_FILENAME, "wb"))
+		self.model["LASTHASH"] = getCurrentCommit()
+		pickle.dump(self.model, open(MODEL_PATH, "wb"))
 		sys.exit(0)
 
 def main():
