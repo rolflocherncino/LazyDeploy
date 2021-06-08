@@ -6,7 +6,7 @@ This project provides rudimentary source tracking for metadata deployment to scr
 
 ## Overview
 
-Lazy Deploy scans the working directory and checks the last modified time of each file to determine which changes are not present on the org. These files are copied to a temporary directory and deployed together, to ensure all dependencies are met. For best results, initialize Lazy Deploy immediately following an org spin.
+Lazy Deploy leverages git source control and the last modified time of files to determine which changes are not present on your org. These files are copied to a temporary directory and deployed together, to ensure all dependencies are met. For best results, initialize Lazy Deploy immediately following an org spin.
 
 ## Usage
 
@@ -17,6 +17,11 @@ lazy
 Reset cache, useful after spinning an org that is already tracked.
 ```
 lazy -r
+```
+
+## Installation
+```
+python3 -m pip install --upgrade git+https://github.com/rolflocherncino/LazyDeploy
 ```
 
 ## Contact
