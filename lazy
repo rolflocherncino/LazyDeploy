@@ -16,7 +16,7 @@ import os
 
 LAZY_DIR = os.path.dirname(__file__) + "/"
 LOCAL_DIR = os.getcwd() + "/"
-MODEL_DIR_NAME = "lazy"
+MODEL_DIR_NAME = "lazy_models"
 MODEL_FILENAME = LOCAL_DIR.replace("/", "") + ".p"
 MODEL_PATH = LAZY_DIR + MODEL_DIR_NAME + '/' + MODEL_FILENAME
 TEMP_DIR_NAME = "temp"
