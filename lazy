@@ -140,7 +140,6 @@ class LazyDeployer:
 				if file[0:index] in copiedTrees:
 					continue
 				copiedTrees.append(file[0:index])
-				os.makedirs(os.path.dirname("./" + TEMP_DIR_NAME + "/" + file[0:len(name)-1]), exist_ok=True)
 				copytree(file[0:index], "./" + TEMP_DIR_NAME + "/" + file[0:index])
 				continue
 			elif "object-meta.xml" in file:
@@ -181,10 +180,10 @@ class LazyDeployer:
 		## Deploy temporary directory
 		errors = ""
 		for line in execute(["sfdx", "force:source:deploy", "-p", TEMP_DIR_NAME]):
-			if "error" in line.lower() and not "Dependent class is invalid" in line:
+			if "error " in line.lower() and not "Dependent class is invalid" in line:
 				errors += line
 			elif line[:3] == "***":
-				print("\r" + line.strip() + " " * 25)
+				print("\r" + line.strip() + " " * 30)
 			else:
 				print(line, end="")
 
