@@ -173,9 +173,10 @@ class LazyDeployer:
 					copyfile(file + "-meta.xml", "./" + TEMP_DIR_NAME + "/" + name + "-meta.xml")
 				except:
 					pass
-		print("\r", end="")
-		if len(copyIssues):
-			print("Unable to copy:" + " " * 30 + reduce(lambda cur, next: "\n" + cur + "\n" + next, copyIssues))
+		if len(copyIssues) == 1:
+			print("\rUnable to copy:" + " "*30 + "\n" + copyIssues[0])
+		elif len(copyIssues):
+			print("\rUnable to copy:" + " "*30 + reduce(lambda cur, next: "\n" + cur + "\n" + next, copyIssues))
 
 		## Deploy temporary directory
 		errors = ""
