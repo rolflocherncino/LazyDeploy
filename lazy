@@ -175,7 +175,7 @@ class LazyDeployer:
 					pass
 		print("\r", end="")
 		if len(copyIssues):
-			print("Unable to copy:" + reduce(lambda cur, next: "\n" + cur + "\n" + next, copyIssues))
+			print("Unable to copy:" + " " * 30 + reduce(lambda cur, next: "\n" + cur + "\n" + next, copyIssues))
 
 		## Deploy temporary directory
 		errors = ""
