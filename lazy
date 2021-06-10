@@ -86,7 +86,7 @@ class LazyDeployer:
 		uniqueFileList = list(set(untrackedFileList).union(set(diffFileList).union(set(lastFiles))))
 
 		# ## Read forceignore
-		patterns = ["**.json", ".*", "**.ts", "**.resource", "sdk-nwc"]
+		patterns = ["**.json", ".*", "**.ts", "**.resource", "sdk-nwc", "**.apex"]
 		ignore = open(".forceignore", "r")
 		ignorelines = ignore.readlines()
 		for line in ignorelines:
